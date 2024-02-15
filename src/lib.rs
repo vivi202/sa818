@@ -12,8 +12,8 @@ enum TailTone {
 }
 
 struct Sa818Config {
-    channel_conf: Channel,
-    filter_conf: FilterConfig,
-    tail_conf: TailTone,
-    volume_conf: VolumeConfig,
+    channel_conf: Option<Channel>,
+    filter_conf: Option<FilterConfig>,
+    tail_conf: Option<TailTone>,
+    volume_conf: Option<VolumeConfig>,
 }

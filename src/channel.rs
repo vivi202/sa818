@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::freq_conf::{FreqConf};
+use crate::freq_conf::FreqConf;
 
 #[derive(Debug)]
 pub enum FmBandwidth {
@@ -19,8 +19,8 @@ impl fmt::Display for FmBandwidth {
 
 #[derive(Debug)]
 pub struct Command {
-    command: String,
-    expected_response: String,
+    pub command: String,
+    pub expected_response: String,
 }
 #[derive(Debug)]
 pub struct Channel {
@@ -50,52 +50,45 @@ impl Channel {
         self.squelch = squelch;
         Ok(self)
     }
-    pub fn build_command(&self) -> Command {
+
+    pub fn generate_command(&self) -> Result<Command, String> {
         let bw_string = match self.bandwidth {
             FmBandwidth::Wide => "0",
             FmBandwidth::Narrow => "1",
         };
+
         let tx_frequency: String;
         let tx_group: String;
         if let Some(ref freq_conf) = self.tx_conf {
             tx_frequency = format!("{:.4}", freq_conf.frequency);
             tx_group = match &freq_conf.group_sel {
-                Some(group_sel) => format!("{}",group_sel),
+                Some(group_sel) => format!("{}", group_sel),
                 None => "0000".to_string(),
             };
         } else {
-            return Command {
-                command: "".to_string(),
-                expected_response: "".to_string(),
-            };
+            return Err(String::from("Tx frequency is not specified!"));
         }
+
         let rx_frequency: String;
         let rx_group: String;
         if let Some(ref freq_conf) = self.rx_conf {
             rx_frequency = format!("{:.4}", freq_conf.frequency);
             rx_group = match &freq_conf.group_sel {
-                Some(group_sel) => format!("{}",group_sel),
+                Some(group_sel) => format!("{}", group_sel),
                 None => "0000".to_string(),
             };
         } else {
-            return Command {
-                command: "".to_string(),
-                expected_response: "".to_string(),
-            };
+            return Err(String::from("Rx frequency is not specified!"));
         }
-        Command {
+
+        Ok(Command {
             //AT+DMOSETGROUP=BW，TX_F，RX_F，Tx_subaudio，SQ，Rx_subaudio
             command: format!(
                 "AT+DMOSETGROUP={},{},{},{},{},{}",
-                bw_string,
-                tx_frequency,
-                rx_frequency,
-                tx_group,
-                self.squelch,
-                rx_group
+                bw_string, tx_frequency, rx_frequency, tx_group, self.squelch, rx_group
             ),
             expected_response: "+DMOSETGROUP:0".to_string(),
-        }
+        })
     }
 
     pub fn tx(mut self, tx_conf: Option<FreqConf>) -> Self {
@@ -107,4 +100,3 @@ impl Channel {
         self
     }
 }
-
