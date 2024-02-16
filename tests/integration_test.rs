@@ -71,3 +71,24 @@ fn test_get_version() {
     let version = sa818::get_version(&mut mock);
     assert!(version.is_err());
 }
+#[test]
+fn test_get_rssi() {
+    //Test success
+    let mut mock = mocked_io::Mock::new().response("RSSI=128\r\n".to_string());
+    let rssi = sa818::get_rssi(&mut mock);
+    assert_eq!(mock.input, "RSSI?\r\n");
+    assert!(rssi.is_ok());
+    assert_eq!(rssi.unwrap(), 128);
+
+    //Test failure
+    let mut mock = mocked_io::Mock::new().response("INVALID=128\r\n".to_string());
+    let rssi = sa818::get_rssi(&mut mock);
+    assert_eq!(mock.input, "RSSI?\r\n");
+    assert!(rssi.is_err());
+
+    //Test parsing failure
+    let mut mock = mocked_io::Mock::new().response("RSSI=abc\r\n".to_string());
+    let rssi = sa818::get_rssi(&mut mock);
+    assert_eq!(mock.input, "RSSI?\r\n");
+    assert!(rssi.is_err());
+}
