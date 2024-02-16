@@ -1,13 +1,13 @@
-use std::{time::Duration};
-use clap::{Parser, Subcommand,};
+use clap::{Parser, Subcommand, ValueEnum};
 use serialport::SerialPort;
-
+use std::time::Duration;
 
 #[derive(Parser)]
+#[command(arg_required_else_help = true)]
 #[command(version, about, long_about = None)]
 struct Cli {
     /// Specify serial port
-    #[arg(short, long, value_name = "SERIAL", default_value = "/dev/ttyS0")]
+    #[arg(short, long, value_name = "SERIAL", default_value = "/dev/ttyS1")]
     serial: String,
     /// Turn debugging information on
     #[arg(short, long, action = clap::ArgAction::Count)]
@@ -20,28 +20,66 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     /// get version of sa818
-    Version {},
-}
-
-fn main() {
-    let cli = Cli::parse();
-    println!("using serial port:{}",cli.serial);
-    match cli.command {
-        Some(Commands::Version {}) =>{
-            let mut serial_io =open_serial(cli.serial);
-            let result = sa818::get_version(&mut serial_io);
-            println!("version: {}",result.unwrap())
-        },
-        None =>{},
+    Version,
+    /// get RSSI value
+    Rssi,
+    #[command(arg_required_else_help = true)]
+    /// configure tx, rx frequency and group selective(CTCSS OR DCS) 
+    Channel{
+        #[command(subcommand)]
+        mode: Option<Mode>,
+        #[arg(long,short,value_enum,default_value = "narrow")]
+        bandwidth: Bandwidth
     }
 }
 
-fn open_serial(serial_port: String) -> Box<dyn SerialPort>{
-    let port = serialport::new(serial_port, 9_600)
-    .timeout(Duration::from_millis(10))
-    .data_bits(serialport::DataBits::Eight)
-    .parity(serialport::Parity::None)
-    .stop_bits(serialport::StopBits::One)
-    .open().expect("Failed to open port");
-    return  port;
+#[derive(Subcommand)]
+enum Mode {
+    Simplex{
+        #[arg(short, long, value_name = "FREQUENCY")]
+        frequency: f32
+    },
+    Halfduplex
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
+enum Bandwidth {
+    Wide,
+    Narrow
+}
+fn main() {
+    let cli = Cli::parse();
+    let mut serial_io: Box<dyn SerialPort> = open_serial(cli.serial);
+
+    match cli.command {
+        Some(Commands::Version) => {
+            let result = sa818::get_version(&mut serial_io);
+            println!("version: {}", result.unwrap())
+        }
+        Some(Commands::Rssi) =>{
+            let result = sa818::get_rssi(&mut serial_io);
+            println!("RSSI: {}", result.unwrap())
+        }
+        Some(Commands::Channel { bandwidth ,mode}) =>{
+            match mode {
+                Some(Mode::Simplex { frequency }) => {
+
+                },
+                Some(Mode::Halfduplex) => todo!(),
+                None => todo!(),
+            }
+        }
+        None => {}
+    }
+}
+
+fn open_serial(serial_port: String) -> Box<dyn SerialPort> {
+    let port = serialport::new(serial_port, 9600)
+        .timeout(Duration::from_millis(1000))
+        .data_bits(serialport::DataBits::Eight)
+        .parity(serialport::Parity::None)
+        .stop_bits(serialport::StopBits::One)
+        .open()
+        .expect("Failed to open port");
+    return port;
 }

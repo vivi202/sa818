@@ -1,4 +1,4 @@
-use crate::group_call::GroupSel;
+use crate::{group_call::GroupSel, read_string};
 use std::{
     fmt,
     io::{Read, Write},
@@ -115,7 +115,7 @@ impl Channel {
         );
         io.write_all(command.as_bytes())
             .map_err(|e| e.to_string())?;
-        let mut response = String::new();
+        let mut response = read_string(io)?;
         io.read_to_string(&mut response)
             .map_err(|e| e.to_string())?;
         if response.trim() != "+DMOSETGROUP=0" {
