@@ -1,6 +1,35 @@
-use std::fmt;
+use crate::group_call::GroupSel;
+use std::{
+    fmt,
+    io::{Read, Write},
+};
+#[derive(Debug)]
+pub struct FreqConf {
+    pub frequency: f32,
+    pub group_sel: Option<GroupSel>,
+}
 
-use crate::freq_conf::FreqConf;
+impl FreqConf {
+    pub fn new(frequency: f32) -> Result<Option<Self>, String> {
+        if (frequency < 134.0 || frequency > 174.0) && (frequency < 400.0 || frequency > 480.0) {
+            return Err(String::from("Invalid Frequency"));
+        }
+        Ok(Some(Self {
+            frequency,
+            group_sel: None,
+        }))
+    }
+    pub fn with_group_sel(
+        frequency: f32,
+        group_call: Option<GroupSel>,
+    ) -> Result<Option<Self>, String> {
+        let mut freq = FreqConf::new(frequency)?;
+        if let Some(ref mut freq) = freq {
+            freq.group_sel = group_call;
+        }
+        Ok(freq)
+    }
+}
 
 #[derive(Debug)]
 pub enum FmBandwidth {
@@ -51,7 +80,7 @@ impl Channel {
         Ok(self)
     }
 
-    pub fn generate_command(&self) -> Result<Command, String> {
+    pub fn write_config<T: Read + Write>(&self, io: &mut T) -> Result<String, String> {
         let bw_string = match self.bandwidth {
             FmBandwidth::Wide => "0",
             FmBandwidth::Narrow => "1",
@@ -80,15 +109,19 @@ impl Channel {
         } else {
             return Err(String::from("Rx frequency is not specified!"));
         }
-
-        Ok(Command {
-            //AT+DMOSETGROUP=BW，TX_F，RX_F，Tx_subaudio，SQ，Rx_subaudio
-            command: format!(
-                "AT+DMOSETGROUP={},{},{},{},{},{}",
-                bw_string, tx_frequency, rx_frequency, tx_group, self.squelch, rx_group
-            ),
-            expected_response: "+DMOSETGROUP:0".to_string(),
-        })
+        let command = format!(
+            "AT+DMOSETGROUP={},{},{},{},{},{}\r\n",
+            bw_string, tx_frequency, rx_frequency, tx_group, self.squelch, rx_group
+        );
+        io.write_all(command.as_bytes())
+            .map_err(|e| e.to_string())?;
+        let mut response = String::new();
+        io.read_to_string(&mut response)
+            .map_err(|e| e.to_string())?;
+        if response.trim() != "+DMOSETGROUP=0" {
+            return Err(format!("Invalid Response: {}", response));
+        }
+        Ok(response)
     }
 
     pub fn tx(mut self, tx_conf: Option<FreqConf>) -> Self {
