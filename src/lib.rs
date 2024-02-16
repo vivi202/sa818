@@ -44,8 +44,8 @@ pub fn get_version<T: Read + Write>(io: &mut T) -> Result<String, String> {
         .map_err(|e| e.to_string())?;
     let mut buffer = String::new();
     io.read_to_string(&mut buffer).map_err(|e| e.to_string())?;
-    let mut splitted_buffer=buffer.trim().split(':');
-    if splitted_buffer.next().unwrap()!= "+VERSION" {
+    let mut splitted_buffer = buffer.trim().split(':');
+    if splitted_buffer.next().unwrap() != "+VERSION" {
         return Err(format!("Invalid Response: {}", buffer));
     }
     Ok(splitted_buffer.next().unwrap().to_string())

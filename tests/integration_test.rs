@@ -26,7 +26,10 @@ fn write_channel_conf() {
     let mut mock = mocked_io::Mock::new().response("+DMOSETGROUP=0\r\n".to_string());
     let response = channel.write_config(&mut mock);
     //Default configuration is NBFM and no group selective.
-    assert_eq!(mock.input, "AT+DMOSETGROUP=1,433.9250,433.9500,0000,4,0000\r\n");
+    assert_eq!(
+        mock.input,
+        "AT+DMOSETGROUP=1,433.9250,433.9500,0000,4,0000\r\n"
+    );
     assert!(response.is_ok());
 
     //Test ctcss setting
@@ -44,7 +47,10 @@ fn write_channel_conf() {
         .rx(FreqConf::with_group_sel(433.950, GroupSel::new_dcs(90, DcsSuffix::Inverted)).unwrap());
     let mut mock = mocked_io::Mock::new().response("+DMOSETGROUP=0\r\n".to_string());
     let response = channel.write_config(&mut mock);
-    assert_eq!(mock.input, "AT+DMOSETGROUP=1,433.9250,433.9500,26N,4,90I\r\n");
+    assert_eq!(
+        mock.input,
+        "AT+DMOSETGROUP=1,433.9250,433.9500,26N,4,90I\r\n"
+    );
     assert!(response.is_ok());
 
     //failure
@@ -54,12 +60,12 @@ fn write_channel_conf() {
 }
 
 #[test]
-fn test_get_version(){
+fn test_get_version() {
     //Test success
     let mut mock = mocked_io::Mock::new().response("+VERSION:SA818_V4.0\r\n".to_string());
     let version = sa818::get_version(&mut mock);
     assert!(version.is_ok());
-    assert_eq!(version.unwrap(),"SA818_V4.0");
+    assert_eq!(version.unwrap(), "SA818_V4.0");
     //Test failure
     let mut mock = mocked_io::Mock::new().response("+INVALID:SA818_V4.0\r\n".to_string());
     let version = sa818::get_version(&mut mock);
