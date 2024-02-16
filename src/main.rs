@@ -1,4 +1,5 @@
-use clap::{Parser, Subcommand, ValueEnum};
+use clap::{Parser, Subcommand, ValueEnum, Args};
+use sa818::channel::Channel;
 use serialport::SerialPort;
 use std::time::Duration;
 
@@ -29,9 +30,33 @@ enum Commands {
         #[command(subcommand)]
         mode: Option<Mode>,
         #[arg(long,short,value_enum,default_value = "narrow")]
-        bandwidth: Bandwidth
+        bandwidth: Bandwidth,
+        #[command(flatten)]
+        receive_group: RxGroupSel,
+        #[command(flatten)]
+        transmit_group: TxGroupSel
     }
 }
+
+#[derive(Args)]
+#[group(required = true, multiple = false)]
+struct RxGroupSel {
+    #[arg(long)]
+    rcts: Option<f32>,
+    #[arg(long)]
+    rdcs: Option<u8>
+}
+
+
+#[derive(Args)]
+#[group(required = true, multiple = false)]
+struct TxGroupSel {
+    #[arg(long)]
+    tcts: Option<f32>,
+    #[arg(long)]
+    tdcs: Option<u8>
+}
+
 
 #[derive(Subcommand)]
 enum Mode {
@@ -60,10 +85,10 @@ fn main() {
             let result = sa818::get_rssi(&mut serial_io);
             println!("RSSI: {}", result.unwrap())
         }
-        Some(Commands::Channel { bandwidth ,mode}) =>{
+        Some(Commands::Channel { bandwidth ,mode, receive_group, transmit_group }) =>{
             match mode {
                 Some(Mode::Simplex { frequency }) => {
-
+                    
                 },
                 Some(Mode::Halfduplex) => todo!(),
                 None => todo!(),
