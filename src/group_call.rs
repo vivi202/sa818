@@ -8,7 +8,7 @@ pub enum DcsSuffix {
 
 #[derive(Debug)]
 pub enum GroupSel {
-    Ctcss(u32),
+    Ctcss(u8),
     Dcs(u32, DcsSuffix),
 }
 
@@ -19,7 +19,7 @@ impl GroupSel {
         }
         Some(GroupSel::Dcs(code, suffix))
     }
-    pub fn new_ctcss(code: u32) -> Option<Self> {
+    pub fn new_ctcss(code: u8) -> Option<Self> {
         if code == 0 || code > 38 {
             return None;
         }
