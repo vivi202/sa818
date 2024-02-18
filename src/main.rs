@@ -36,10 +36,7 @@ enum Commands {
         bandwidth: Bandwidth,
         #[arg(
             long,
-            conflicts_with = "rcts",
-            conflicts_with = "rdcs",
-            conflicts_with = "tcts",
-            conflicts_with = "tdcs",
+            conflicts_with_all = ["rcts","rdcs","tcts","tdcs"],
             default_value = "0"
         )]
         ctcss: Option<u8>,
