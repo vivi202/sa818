@@ -34,11 +34,22 @@ enum Commands {
         mode: Option<Mode>,
         #[arg(long, short, value_enum, default_value = "narrow")]
         bandwidth: Bandwidth,
+        /// Use the same dcs for both tx and rx
+        /// Usage --dcs code<N|I>
+        /// Example of valid inputs --dcs 32I
+        ///                         --dcs 32N 
         #[arg(
             long,
-            conflicts_with_all = ["rcts","rdcs","tcts","tdcs"],
-            default_value = "0"
+            short,
+            conflicts_with_all = ["rcts","rdcs","tcts","tdcs","ctcss"],
         )]
+        dcs: Option<String>,
+        #[arg(
+            long,
+            short,
+            conflicts_with_all = ["rcts","rdcs","tcts","tdcs","dcs"],
+        )]
+        /// Use the same ctcss for both tx and rx
         ctcss: Option<u8>,
         #[command(flatten)]
         receive_group: Option<RxGroupSel>,
@@ -99,6 +110,7 @@ fn main() {
         Some(Commands::Channel {
             bandwidth,
             mode,
+            dcs,
             ctcss,
             receive_group,
             transmit_group,
@@ -110,10 +122,16 @@ fn main() {
             match mode {
                 Some(Mode::Simplex { frequency }) => {
                     let mut chan = Channel::default().bandwidth(bandwidth);
-                    //Setup RX
-                    chan.rx_conf = setup_rx(receive_group, ctcss, frequency);
-                    //Setup TX
-                    chan.tx_conf = setup_tx(transmit_group, ctcss, frequency);
+                    if let Some(ctcss) = ctcss {
+                        println!("ctcss Exist");
+                        chan.rx_conf = FreqConf::with_group_sel(frequency, GroupSel::new_ctcss(ctcss)).unwrap();
+                        //Setup TX
+                        chan.tx_conf = FreqConf::with_group_sel(frequency, GroupSel::new_ctcss(ctcss)).unwrap();
+                    }
+                    if let Some(dcs) = dcs {
+                        println!("dcs Exist");
+                        //TODO function that parse DCS from strings
+                    }
                     dbg!(&chan);
                     // chan.write_config(&mut serial_io).unwrap();
                 }
@@ -122,10 +140,16 @@ fn main() {
                     txfrequency,
                 }) => {
                     let mut chan = Channel::default().bandwidth(bandwidth);
-                    //Setup RX
-                    chan.rx_conf = setup_rx(receive_group, ctcss, rxfrequency);
-                    //Setup TX
-                    chan.tx_conf = setup_tx(transmit_group, ctcss, txfrequency);
+                    if let Some(ctcss)= ctcss {
+                        println!("ctcss Exist");
+                        //Setup RX
+                        chan.rx_conf = FreqConf::with_group_sel(rxfrequency, GroupSel::new_ctcss(ctcss)).unwrap();
+                        //Setup TX
+                        chan.tx_conf = FreqConf::with_group_sel(txfrequency, GroupSel::new_ctcss(ctcss)).unwrap();
+                    }
+                    if let Some(dcs) = dcs {
+                        println!("dcs Exist");
+                    }
                     // chan.write_config(&mut serial_io).unwrap();
                     dbg!(chan);
                 }
@@ -136,61 +160,6 @@ fn main() {
     }
 }
 
-fn setup_rx(
-    receive_group: Option<RxGroupSel>,
-    ctcss: Option<u8>,
-    frequency: f32,
-) -> Option<FreqConf> {
-    match receive_group {
-        Some(rec) => {
-            if let Some(dcs) = rec.rdcs {
-                return FreqConf::with_group_sel(
-                    frequency,
-                    GroupSel::new_dcs(dcs, sa818::group_call::DcsSuffix::Normal),
-                )
-                .unwrap();
-            }
-            if let Some(code) = rec.rcts {
-                //TODO CONVERT CTCSS FREQ TO CODE
-                return FreqConf::with_group_sel(frequency, GroupSel::new_ctcss(code)).unwrap();
-            }
-        }
-        None => {
-            if let Some(code) = ctcss {
-                return FreqConf::with_group_sel(frequency, GroupSel::new_ctcss(code)).unwrap();
-            }
-        }
-    }
-    return None;
-}
-
-fn setup_tx(
-    receive_group: Option<TxGroupSel>,
-    ctcss: Option<u8>,
-    frequency: f32,
-) -> Option<FreqConf> {
-    match receive_group {
-        Some(rec) => {
-            if let Some(dcs) = rec.tdcs {
-                return FreqConf::with_group_sel(
-                    frequency,
-                    GroupSel::new_dcs(dcs, sa818::group_call::DcsSuffix::Normal),
-                )
-                .unwrap();
-            }
-            if let Some(code) = rec.tcts {
-                //TODO CONVERT CTCSS FREQ TO CODE
-                return FreqConf::with_group_sel(frequency, GroupSel::new_ctcss(code)).unwrap();
-            }
-        }
-        None => {
-            if let Some(code) = ctcss {
-                return FreqConf::with_group_sel(frequency, GroupSel::new_ctcss(code)).unwrap();
-            }
-        }
-    }
-    return None;
-}
 fn open_serial(serial_port: String) -> Box<dyn SerialPort> {
     let port = serialport::new(serial_port, 9600)
         .timeout(Duration::from_millis(1000))

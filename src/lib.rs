@@ -31,8 +31,7 @@ impl Sa818Config {
 pub fn handshake<T: Read + Write>(io: &mut T) -> Result<String, String> {
     io.write_all("AT+DMOCONNECT\r\n".as_bytes())
         .map_err(|e| e.to_string())?;
-    let mut buffer = String::new();
-    io.read_to_string(&mut buffer).map_err(|e| e.to_string())?;
+    let buffer = read_string(io)?;
     if buffer.trim() != "+DMOCONNECT:0" {
         return Err(format!("Invalid Response: {}", buffer));
     }
