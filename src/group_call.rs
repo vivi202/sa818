@@ -1,12 +1,12 @@
 use core::fmt;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum DcsSuffix {
     Inverted,
     Normal,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum GroupSel {
     Ctcss(u8),
     Dcs(u32, DcsSuffix),
@@ -24,6 +24,27 @@ impl GroupSel {
             return None;
         }
         Some(GroupSel::Ctcss(code))
+    }
+}
+
+pub fn parse_dcs(mut dcs_string: String) -> Result<Option<GroupSel>, String> {
+    let last = dcs_string.pop();
+    match last {
+        Some(char) => {
+            let code = dcs_string.parse::<u32>().map_err(|e| e.to_string())?;
+            match char {
+                'N' => {
+                    return Ok(Some(GroupSel::Dcs(code, DcsSuffix::Normal)));
+                }
+                'I' => {
+                    return Ok(Some(GroupSel::Dcs(code, DcsSuffix::Inverted)));
+                }
+                _ => {
+                    return Err(format!("Invalid dcs suffix {}", char));
+                }
+            }
+        }
+        None => Err("Error Empty dcs string".to_string()),
     }
 }
 
