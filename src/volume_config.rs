@@ -1,3 +1,3 @@
 pub struct VolumeConfig {
-    value: u8,
+  value: u8,
 }

@@ -1,4 +1,4 @@
 pub enum TailTone {
-    Open,
-    Close,
+  Open,
+  Close,
 }
