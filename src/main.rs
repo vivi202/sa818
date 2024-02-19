@@ -1,4 +1,4 @@
-use clap::{builder::Str, Args, Parser, Subcommand, ValueEnum};
+use clap::{Args, Parser, Subcommand, ValueEnum};
 use sa818::{
   channel::{Channel, FmBandwidth, FreqConf},
   group_call::GroupSel,
@@ -121,6 +121,9 @@ fn main() {
       match mode {
         Some(Mode::Simplex { frequency }) => {
           let mut chan = Channel::default().bandwidth(bandwidth);
+          //By default without group selective
+          chan.rx_conf = FreqConf::new(frequency).unwrap();
+          chan.tx_conf = FreqConf::new(frequency).unwrap();
 
           if let Some(ctcss) = &ctcss {
             let code = sa818::group_call::parse_ctcss(&ctcss);
@@ -138,16 +141,10 @@ fn main() {
 
           if let Some(receive_group) = receive_group {
             setup_rx_group(receive_group, &mut chan, frequency);
-          } else {
-            //BUG
-            chan.rx_conf = FreqConf::new(frequency).unwrap();
           }
 
           if let Some(transmit_group) = transmit_group {
             setup_tx_group(transmit_group, &mut chan, frequency);
-          } else {
-            //BUG
-            chan.tx_conf = FreqConf::new(frequency).unwrap();
           }
 
           dbg!(&chan);
@@ -158,7 +155,9 @@ fn main() {
           txfrequency,
         }) => {
           let mut chan = Channel::default().bandwidth(bandwidth);
-
+          //By default without group selective
+          chan.rx_conf = FreqConf::new(rxfrequency).unwrap();
+          chan.tx_conf = FreqConf::new(txfrequency).unwrap();
           if let Some(ctcss) = ctcss {
             let code = sa818::group_call::parse_ctcss(&ctcss);
             if let Some(code) = code {
@@ -214,7 +213,15 @@ fn setup_halfduplex_ctcss(chan: &mut Channel, rxfrequency: f32, ctcss: u8, txfre
 }
 
 fn setup_tx_group(transmit_group: TxGroupSel, chan: &mut Channel, frequency: f32) {
-  if let Some(cts) = transmit_group.tcts {}
+  if let Some(cts) = &transmit_group.tcts {
+    let code = sa818::group_call::parse_ctcss(cts);
+    if let Some(code) = code {
+      chan.tx_conf = FreqConf::with_group_sel(frequency, GroupSel::new_ctcss(code)).unwrap();
+    } else {
+      println!("{} ctcss is not valid", cts);
+      exit(1);
+    }
+  }
   if let Some(tdcs) = transmit_group.tdcs {
     let tdcs = sa818::group_call::parse_dcs(tdcs);
     match tdcs {
@@ -227,7 +234,15 @@ fn setup_tx_group(transmit_group: TxGroupSel, chan: &mut Channel, frequency: f32
 }
 
 fn setup_rx_group(receive_group: RxGroupSel, chan: &mut Channel, frequency: f32) {
-  if let Some(cts) = receive_group.rcts {}
+  if let Some(cts) = &receive_group.rcts {
+    let code = sa818::group_call::parse_ctcss(cts);
+    if let Some(code) = code {
+      chan.rx_conf = FreqConf::with_group_sel(frequency, GroupSel::new_ctcss(code)).unwrap();
+    } else {
+      println!("{} ctcss is not valid", cts);
+      exit(1);
+    }
+  }
   if let Some(rdcs) = receive_group.rdcs {
     let rdcs = sa818::group_call::parse_dcs(rdcs);
     match rdcs {
@@ -248,7 +263,7 @@ fn setup_dcs(dcs: String, chan: &mut Channel, frequency: f32) {
       chan.tx_conf = FreqConf::with_group_sel(frequency, dcs).unwrap();
     }
     Err(e) => {
-      println!("{}", e);
+      println!("{} invalid dcs", e);
       exit(1);
     }
   }
