@@ -1,7 +1,5 @@
 use core::fmt;
 
-use clap::builder::Str;
-
 #[derive(Debug, Clone, Copy)]
 pub enum DcsSuffix {
   Inverted,
@@ -57,11 +55,11 @@ pub fn parse_dcs(mut dcs_string: String) -> Result<Option<GroupSel>, String> {
   }
 }
 
-pub fn  parse_ctcss(ctcss: &String) -> Option<u8> {
+pub fn parse_ctcss(ctcss: &String) -> Result<u8, String> {
   let code = CTCSS_FREQ.iter().position(|&f| f == ctcss);
   match code {
-    Some(code) => Some(code as u8),
-    None => None,
+    Some(code) => Ok(code as u8),
+    None => Err(format!("{} is not a valid ctcss", ctcss)),
   }
 }
 

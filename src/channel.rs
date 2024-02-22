@@ -56,7 +56,7 @@ pub struct Channel {
   pub bandwidth: FmBandwidth,
   pub tx_conf: Option<FreqConf>,
   pub rx_conf: Option<FreqConf>,
-  pub squelch: u8,
+  squelch: u8,
 }
 
 impl Channel {
