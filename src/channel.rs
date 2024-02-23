@@ -10,23 +10,23 @@ pub struct FreqConf {
 }
 
 impl FreqConf {
-  pub fn new(frequency: f32) -> Result<Option<Self>, String> {
+  pub fn new(frequency: f32) -> Result<Self, String> {
     if (frequency < 134.0 || frequency > 174.0) && (frequency < 400.0 || frequency > 480.0) {
       return Err(String::from("Invalid Frequency"));
     }
-    Ok(Some(Self {
+    Ok(Self {
       frequency,
       group_sel: None,
-    }))
+    })
   }
-  pub fn with_group_sel(
-    frequency: f32,
-    group_call: Option<GroupSel>,
-  ) -> Result<Option<Self>, String> {
+  pub fn with_group_sel(frequency: f32, group_call: GroupSel) -> Result<Self, String> {
     let mut freq = FreqConf::new(frequency)?;
-    if let Some(ref mut freq) = freq {
-      freq.group_sel = group_call;
-    }
+    freq.group_sel = Some(group_call);
+    Ok(freq)
+  }
+  pub fn with_ctcss(frequency: f32, code: u8) -> Result<Self, String> {
+    let mut freq = FreqConf::new(frequency)?;
+    freq.group_sel = Some(GroupSel::new_ctcss(code)?);
     Ok(freq)
   }
 }
@@ -53,9 +53,9 @@ pub struct Command {
 }
 #[derive(Debug)]
 pub struct Channel {
-  pub bandwidth: FmBandwidth,
-  pub tx_conf: Option<FreqConf>,
-  pub rx_conf: Option<FreqConf>,
+  bandwidth: FmBandwidth,
+  tx_conf: Option<FreqConf>,
+  rx_conf: Option<FreqConf>,
   squelch: u8,
 }
 
@@ -67,6 +67,12 @@ impl Channel {
       rx_conf: None,
       squelch: 4,
     }
+  }
+  pub fn set_tx(&mut self, fq: FreqConf) {
+    self.tx_conf = Some(fq);
+  }
+  pub fn set_rx(&mut self, fq: FreqConf) {
+    self.rx_conf = Some(fq);
   }
   pub fn bandwidth(mut self, bandwidth: FmBandwidth) -> Self {
     self.bandwidth = bandwidth;
@@ -124,12 +130,12 @@ impl Channel {
     Ok(response)
   }
 
-  pub fn tx(mut self, tx_conf: Option<FreqConf>) -> Self {
-    self.tx_conf = tx_conf;
+  pub fn tx(mut self, tx_conf: FreqConf) -> Self {
+    self.tx_conf = Some(tx_conf);
     self
   }
-  pub fn rx(mut self, rx_conf: Option<FreqConf>) -> Self {
-    self.rx_conf = rx_conf;
+  pub fn rx(mut self, rx_conf: FreqConf) -> Self {
+    self.rx_conf = Some(rx_conf);
     self
   }
 }

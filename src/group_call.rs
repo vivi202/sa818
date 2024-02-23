@@ -20,31 +20,31 @@ const CTCSS_FREQ: [&'static str; 39] = [
 ];
 
 impl GroupSel {
-  pub fn new_dcs(code: u32, suffix: DcsSuffix) -> Option<Self> {
+  pub fn new_dcs(code: u32, suffix: DcsSuffix) -> Result<Self, String> {
     if code < 23 || code > 754 {
-      return None;
+      return Err(format!("Invalid ctcss code {}", code));
     }
-    Some(GroupSel::Dcs(code, suffix))
+    Ok(GroupSel::Dcs(code, suffix))
   }
-  pub fn new_ctcss(code: u8) -> Option<Self> {
+  pub fn new_ctcss(code: u8) -> Result<Self, String> {
     if code == 0 || code > 38 {
-      return None;
+      return Err(format!("Invalid ctcss code {}", code));
     }
-    Some(GroupSel::Ctcss(code))
+    Ok(GroupSel::Ctcss(code))
   }
 }
 
-pub fn parse_dcs(mut dcs_string: String) -> Result<Option<GroupSel>, String> {
+pub fn parse_dcs(mut dcs_string: String) -> Result<GroupSel, String> {
   let last = dcs_string.pop();
   match last {
     Some(char) => {
       let code = dcs_string.parse::<u32>().map_err(|e| e.to_string())?;
       match char {
         'N' => {
-          return Ok(Some(GroupSel::Dcs(code, DcsSuffix::Normal)));
+          return Ok(GroupSel::Dcs(code, DcsSuffix::Normal));
         }
         'I' => {
-          return Ok(Some(GroupSel::Dcs(code, DcsSuffix::Inverted)));
+          return Ok(GroupSel::Dcs(code, DcsSuffix::Inverted));
         }
         _ => {
           return Err(format!("Invalid dcs suffix {}", char));
@@ -55,10 +55,10 @@ pub fn parse_dcs(mut dcs_string: String) -> Result<Option<GroupSel>, String> {
   }
 }
 
-pub fn parse_ctcss(ctcss: &String) -> Result<u8, String> {
+pub fn parse_ctcss(ctcss: &String) -> Result<GroupSel, String> {
   let code = CTCSS_FREQ.iter().position(|&f| f == ctcss);
   match code {
-    Some(code) => Ok(code as u8),
+    Some(code) => Ok(GroupSel::Ctcss(code as u8)),
     None => Err(format!("{} is not a valid ctcss", ctcss)),
   }
 }

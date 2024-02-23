@@ -136,12 +136,12 @@ fn main() {
             });
 
           if let Some(ctcss) = &ctcss {
-            let code = sa818::group_call::parse_ctcss(ctcss).unwrap_or_else(|e| {
+            let ctcss = sa818::group_call::parse_ctcss(ctcss).unwrap_or_else(|e| {
               eprintln!("{e}");
               exit(1);
             });
-            chan.rx_conf = FreqConf::with_group_sel(frequency, GroupSel::new_ctcss(code)).unwrap();
-            chan.tx_conf = FreqConf::with_group_sel(frequency, GroupSel::new_ctcss(code)).unwrap();
+            chan.set_rx(FreqConf::with_group_sel(frequency, ctcss).unwrap());
+            chan.set_tx(FreqConf::with_group_sel(frequency, ctcss).unwrap());
             dbg!(&chan);
             exit(0);
           }
@@ -162,8 +162,8 @@ fn main() {
           }
 
           //By default without group selective
-          chan.rx_conf = FreqConf::new(frequency).unwrap();
-          chan.tx_conf = FreqConf::new(frequency).unwrap();
+          chan.set_rx(FreqConf::new(frequency).unwrap());
+          chan.set_tx(FreqConf::new(frequency).unwrap());
           dbg!(&chan);
           // chan.write_config(&mut serial_io).unwrap();
         }
@@ -178,18 +178,13 @@ fn main() {
               println!("{e}");
               exit(1);
             });
-          //By default without group selective
-          chan.rx_conf = FreqConf::new(rxfrequency).unwrap();
-          chan.tx_conf = FreqConf::new(txfrequency).unwrap();
           if let Some(ctcss) = ctcss {
-            let code = sa818::group_call::parse_ctcss(&ctcss).unwrap_or_else(|e| {
+            let ctcss = sa818::group_call::parse_ctcss(&ctcss).unwrap_or_else(|e| {
               eprint!("{} ctcss is not valid", ctcss);
               exit(1);
             });
-            chan.rx_conf =
-              FreqConf::with_group_sel(rxfrequency, GroupSel::new_ctcss(code)).unwrap();
-            chan.tx_conf =
-              FreqConf::with_group_sel(txfrequency, GroupSel::new_ctcss(code)).unwrap();
+            chan.set_rx(FreqConf::with_group_sel(rxfrequency, ctcss).unwrap());
+            chan.set_tx(FreqConf::with_group_sel(txfrequency, ctcss).unwrap());
           }
 
           if let Some(dcs) = dcs {
@@ -197,8 +192,8 @@ fn main() {
               println!("{e}");
               exit(1);
             });
-            chan.rx_conf = FreqConf::with_group_sel(rxfrequency, dcs).unwrap();
-            chan.tx_conf = FreqConf::with_group_sel(txfrequency, dcs).unwrap();
+            chan.set_rx(FreqConf::with_group_sel(rxfrequency, dcs).unwrap());
+            chan.set_tx(FreqConf::with_group_sel(txfrequency, dcs).unwrap());
           }
 
           if let Some(receive_group) = receive_group {
@@ -220,35 +215,37 @@ fn main() {
 
 fn setup_tx_group(transmit_group: TxGroupSel, chan: &mut Channel, frequency: f32) {
   if let Some(cts) = &transmit_group.tcts {
-    let code = sa818::group_call::parse_ctcss(cts).unwrap_or_else(|e| {
+    let ctcss = sa818::group_call::parse_ctcss(cts).unwrap_or_else(|e| {
       println!("{e}");
       exit(1)
     });
-    chan.tx_conf = FreqConf::with_group_sel(frequency, GroupSel::new_ctcss(code)).unwrap();
+    chan.set_tx(FreqConf::with_group_sel(frequency, ctcss).unwrap());
   }
+
   if let Some(tdcs) = transmit_group.tdcs {
     let tdcs = sa818::group_call::parse_dcs(tdcs).unwrap_or_else(|e| {
       println!("{e}");
       exit(1)
     });
-    chan.tx_conf = FreqConf::with_group_sel(frequency, tdcs).unwrap();
+
+    chan.set_tx(FreqConf::with_group_sel(frequency, tdcs).unwrap());
   }
 }
 
 fn setup_rx_group(receive_group: RxGroupSel, chan: &mut Channel, frequency: f32) {
   if let Some(cts) = &receive_group.rcts {
-    let code = sa818::group_call::parse_ctcss(cts).unwrap_or_else(|e| {
+    let ctcss = sa818::group_call::parse_ctcss(cts).unwrap_or_else(|e| {
       println!("{e}");
       exit(1)
     });
-    chan.rx_conf = FreqConf::with_group_sel(frequency, GroupSel::new_ctcss(code)).unwrap();
+    chan.set_rx(FreqConf::with_group_sel(frequency, ctcss).unwrap());
   }
   if let Some(rdcs) = receive_group.rdcs {
     let rdcs = sa818::group_call::parse_dcs(rdcs).unwrap_or_else(|e| {
       println!("{e}");
       exit(1)
     });
-    chan.rx_conf = FreqConf::with_group_sel(frequency, rdcs).unwrap();
+    chan.set_rx(FreqConf::with_group_sel(frequency, rdcs).unwrap());
   }
 }
 
@@ -256,8 +253,8 @@ fn setup_dcs(dcs: String, chan: &mut Channel, frequency: f32) {
   let dcs = sa818::group_call::parse_dcs(dcs);
   match dcs {
     Ok(dcs) => {
-      chan.rx_conf = FreqConf::with_group_sel(frequency, dcs).unwrap();
-      chan.tx_conf = FreqConf::with_group_sel(frequency, dcs).unwrap();
+      chan.set_rx(FreqConf::with_group_sel(frequency, dcs).unwrap());
+      chan.set_tx(FreqConf::with_group_sel(frequency, dcs).unwrap());
     }
     Err(e) => {
       println!("{e}",);

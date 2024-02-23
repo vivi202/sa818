@@ -31,20 +31,21 @@ fn write_channel_conf() {
     "AT+DMOSETGROUP=1,433.9250,433.9500,0000,4,0000\r\n"
   );
   assert!(response.is_ok());
-
   //Test ctcss setting
   let channel = Channel::default()
-    .tx(FreqConf::with_group_sel(433.925, GroupSel::new_ctcss(15)).unwrap())
-    .rx(FreqConf::with_group_sel(433.95, GroupSel::new_ctcss(8)).unwrap());
+    .tx(FreqConf::with_ctcss(433.925, 15).unwrap())
+    .rx(FreqConf::with_ctcss(433.95, 8).unwrap());
   let mut mock = mocked_io::Mock::new().response("+DMOSETGROUP=0\r\n".to_string());
   let response = channel.write_config(&mut mock);
   assert_eq!(mock.input, "AT+DMOSETGROUP=1,433.9250,433.9500,15,4,8\r\n");
   assert!(response.is_ok());
 
   //Test dcs setting
+  let normal_dcs = GroupSel::new_dcs(26, DcsSuffix::Normal).unwrap();
+  let inverted_dcs = GroupSel::new_dcs(90, DcsSuffix::Inverted).unwrap();
   let channel = Channel::default()
-    .tx(FreqConf::with_group_sel(433.925, GroupSel::new_dcs(26, DcsSuffix::Normal)).unwrap())
-    .rx(FreqConf::with_group_sel(433.950, GroupSel::new_dcs(90, DcsSuffix::Inverted)).unwrap());
+    .tx(FreqConf::with_group_sel(433.925, normal_dcs).unwrap())
+    .rx(FreqConf::with_group_sel(433.950, inverted_dcs).unwrap());
   let mut mock = mocked_io::Mock::new().response("+DMOSETGROUP=0\r\n".to_string());
   let response = channel.write_config(&mut mock);
   assert_eq!(
