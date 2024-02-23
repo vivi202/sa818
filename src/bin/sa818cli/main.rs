@@ -1,8 +1,5 @@
 use clap::{Args, Parser, Subcommand, ValueEnum};
-use sa818::{
-  channel::{Channel, FmBandwidth, FreqConf},
-  group_call::GroupSel,
-};
+use sa818::channel::{Channel, FmBandwidth, FreqConf};
 use serialport::SerialPort;
 use std::{process::exit, time::Duration};
 
@@ -102,15 +99,15 @@ enum Bandwidth {
 }
 fn main() {
   let cli = Cli::parse();
-  //    let mut serial_io: Box<dyn SerialPort> = open_serial(cli.serial);
+  let mut serial_io: Box<dyn SerialPort> = open_serial(cli.serial);
   match cli.command {
     Some(Commands::Version) => {
-      // let result = sa818::get_version(&mut serial_io);
-      // println!("version: {}", result.unwrap())
+      let result = sa818::get_version(&mut serial_io);
+      println!("version: {}", result.unwrap())
     }
     Some(Commands::Rssi) => {
-      // let result = sa818::get_rssi(&mut serial_io);
-      // println!("RSSI: {}", result.unwrap())
+      let result = sa818::get_rssi(&mut serial_io);
+      println!("RSSI: {}", result.unwrap())
     }
     Some(Commands::Channel {
       bandwidth,
@@ -134,38 +131,39 @@ fn main() {
               eprint!("{e}");
               exit(1)
             });
+          //By default without group selective
+          chan.set_rx(FreqConf::new(frequency).unwrap());
+          chan.set_tx(FreqConf::new(frequency).unwrap());
 
           if let Some(ctcss) = &ctcss {
             let ctcss = sa818::group_call::parse_ctcss(ctcss).unwrap_or_else(|e| {
               eprintln!("{e}");
               exit(1);
             });
+
             chan.set_rx(FreqConf::with_group_sel(frequency, ctcss).unwrap());
             chan.set_tx(FreqConf::with_group_sel(frequency, ctcss).unwrap());
-            dbg!(&chan);
-            exit(0);
           }
 
           if let Some(dcs) = dcs {
-            setup_dcs(dcs, &mut chan, frequency);
-            exit(0)
+            let dcs = sa818::group_call::parse_dcs(dcs).unwrap_or_else(|e| {
+              println!("{e}");
+              exit(1)
+            });
+            chan.set_rx(FreqConf::with_group_sel(frequency, dcs).unwrap());
+            chan.set_tx(FreqConf::with_group_sel(frequency, dcs).unwrap());
           }
 
           if let Some(receive_group) = receive_group {
             setup_rx_group(receive_group, &mut chan, frequency);
-            exit(0)
           }
 
           if let Some(transmit_group) = transmit_group {
             setup_tx_group(transmit_group, &mut chan, frequency);
-            exit(0)
           }
 
-          //By default without group selective
-          chan.set_rx(FreqConf::new(frequency).unwrap());
-          chan.set_tx(FreqConf::new(frequency).unwrap());
           dbg!(&chan);
-          // chan.write_config(&mut serial_io).unwrap();
+          chan.write_config(&mut serial_io).unwrap();
         }
         Some(Mode::Halfduplex {
           rxfrequency,
@@ -175,12 +173,15 @@ fn main() {
             .bandwidth(bandwidth)
             .squelch(squelch)
             .unwrap_or_else(|e| {
-              println!("{e}");
+              eprintln!("{e}");
               exit(1);
             });
+          //By default without group selective
+          chan.set_rx(FreqConf::new(rxfrequency).unwrap());
+          chan.set_tx(FreqConf::new(txfrequency).unwrap());
           if let Some(ctcss) = ctcss {
             let ctcss = sa818::group_call::parse_ctcss(&ctcss).unwrap_or_else(|e| {
-              eprint!("{} ctcss is not valid", ctcss);
+              eprintln!("{e} ctcss is not valid");
               exit(1);
             });
             chan.set_rx(FreqConf::with_group_sel(rxfrequency, ctcss).unwrap());
@@ -203,8 +204,8 @@ fn main() {
           if let Some(transmit_group) = transmit_group {
             setup_tx_group(transmit_group, &mut chan, txfrequency)
           }
-          // chan.write_config(&mut serial_io).unwrap();
-          dbg!(chan);
+          dbg!(&chan);
+          chan.write_config(&mut serial_io).unwrap();
         }
         None => todo!(),
       }
@@ -246,20 +247,6 @@ fn setup_rx_group(receive_group: RxGroupSel, chan: &mut Channel, frequency: f32)
       exit(1)
     });
     chan.set_rx(FreqConf::with_group_sel(frequency, rdcs).unwrap());
-  }
-}
-
-fn setup_dcs(dcs: String, chan: &mut Channel, frequency: f32) {
-  let dcs = sa818::group_call::parse_dcs(dcs);
-  match dcs {
-    Ok(dcs) => {
-      chan.set_rx(FreqConf::with_group_sel(frequency, dcs).unwrap());
-      chan.set_tx(FreqConf::with_group_sel(frequency, dcs).unwrap());
-    }
-    Err(e) => {
-      println!("{e}",);
-      exit(1)
-    }
   }
 }
 
